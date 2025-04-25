@@ -1,0 +1,7 @@
+[project]
+name = "tictoctoe"
+version = "1.1.0"
+description = "feature reach Tic Toc Toe game"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["rich>=14.0.0"]
