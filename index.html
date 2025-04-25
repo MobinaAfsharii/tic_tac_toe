@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Tic-Tac-Toe AI</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            body {
+                font-family: "Inter", sans-serif;
+                overscroll-behavior: none;
+            }
+            .cell {
+                width: 100px;
+                height: 100px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 3rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #cbd5e1;
+                transition: background-color 0.2s ease-in-out;
+                user-select: none;
+                border-radius: 0.5rem;
+            }
+            .cell:hover {
+                background-color: #f1f5f9;
+            }
+            @media (max-width: 400px) {
+                .cell {
+                    width: 80px;
+                    height: 80px;
+                    font-size: 2.5rem;
+                }
+                #game-board {
+                    gap: 0.25rem;
+                }
+            }
+            .winning-cell {
+                background-color: #a7f3d0;
+                color: #047857;
+            }
+            .text-player {
+                color: #2563eb;
+            .text-ai {
+                color: #dc2626;
+            }
+
+            #message-box {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 1.5rem 2.5rem;
+                background-color: rgba(0, 0, 0, 0.8);
+                color: white;
+                border-radius: 0.75rem;
+                font-size: 1.5rem;
+                text-align: center;
+                z-index: 100;
+                opacity: 0;
+                visibility: hidden;
+                transition:
+                    opacity 0.3s ease,
+                    visibility 0.3s ease;
+            }
+            #message-box.show {
+                opacity: 1;
+                visibility: visible;
+            }
+        </style>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body
+        class="bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center justify-center min-h-screen p-4"
+    >
+        <h1 class="text-4xl font-bold text-gray-800 mb-6 text-center">
+            Tic-Tac-Toe
+        </h1>
+        <p id="status" class="text-xl text-gray-600 mb-4 h-6 text-center"></p>
+
+        <div
+            id="game-board"
+            class="grid grid-cols-3 gap-2 bg-white p-3 rounded-lg shadow-xl mb-6"
+        ></div>
+
+        <button
+            id="restart-button"
+            class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition duration-200 ease-in-out"
+        >
+            Restart Game
+        </button>
+
+        <div id="message-box">Game Over!</div>
+
+        <script>
+            const boardElement = document.getElementById("game-board");
+            const statusElement = document.getElementById("status");
+            const restartButton = document.getElementById("restart-button");
+            const messageBox = document.getElementById("message-box");
+
+            const PLAYER = "X";
+            const AI = "O";
+            const EMPTY = null;
+
+            let board = Array(9).fill(EMPTY);
+            let currentPlayer = PLAYER;
+            let gameActive = true;
+
+            const winningCombos = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6],
+            ];
+
+            function initializeGame() {
+                board.fill(EMPTY);
+                currentPlayer = PLAYER;
+                gameActive = true;
+                statusElement.textContent = "Your Turn (X)";
+                boardElement.innerHTML = "";
+                hideMessage();
+
+                for (let i = 0; i < 9; i++) {
+                    const cell = document.createElement("div");
+                    cell.classList.add("cell");
+                    cell.dataset.index = i;
+                    cell.addEventListener("click", handleCellClick, {
+                        once: true,
+                    });
+                    boardElement.appendChild(cell);
+                }
+            }
+
+            function handleCellClick(event) {
+                if (!gameActive || currentPlayer !== PLAYER) return;
+
+                const index = parseInt(event.target.dataset.index);
+
+                if (board[index] === EMPTY) {
+                    makeMove(index, PLAYER);
+
+                    if (!checkGameOver()) {
+                        switchPlayer();
+
+                        setTimeout(aiMove, 500);
+                    }
+                }
+            }
+
+            restartButton.addEventListener("click", initializeGame);
+
+            function makeMove(index, player) {
+                if (!gameActive || board[index] !== EMPTY) return false;
+
+                board[index] = player;
+                updateCellUI(index, player);
+                return true;
+            }
+
+            function updateCellUI(index, player) {
+                const cell = boardElement.children[index];
+                if (cell) {
+                    cell.textContent = player;
+                    cell.classList.add(
+                        player === PLAYER ? "text-player" : "text-ai",
+                    );
+
+                    cell.removeEventListener("click", handleCellClick);
+                    cell.style.cursor = "default";
+
+                    cell.classList.remove("hover:bg-slate-100");
+                }
+            }
+
+            function switchPlayer() {
+                currentPlayer = currentPlayer === PLAYER ? AI : PLAYER;
+                statusElement.textContent =
+                    currentPlayer === PLAYER
+                        ? "Your Turn (X)"
+                        : "AI's Turn (O)...";
+            }
+
+            function checkWin(currentBoard, player) {
+                return winningCombos.some((combination) => {
+                    return combination.every(
+                        (index) => currentBoard[index] === player,
+                    );
+                });
+            }
+
+            function checkDraw(currentBoard) {
+                return (
+                    !checkWin(currentBoard, PLAYER) &&
+                    !checkWin(currentBoard, AI) &&
+                    currentBoard.every((cell) => cell !== EMPTY)
+                );
+            }
+
+            function checkGameOver() {
+                if (checkWin(board, PLAYER)) {
+                    endGame(PLAYER);
+                    return true;
+                }
+                if (checkWin(board, AI)) {
+                    endGame(AI);
+                    return true;
+                }
+                if (checkDraw(board)) {
+                    endGame(null);
+                    return true;
+                }
+                return false;
+            }
+
+            function endGame(winner) {
+                gameActive = false;
+                removeCellListeners();
+
+                let message = "";
+                if (winner === PLAYER) {
+                    message = "🎉 You Win! 🎉";
+                    statusElement.textContent = "Congratulations!";
+                    highlightWinningCells(PLAYER);
+                } else if (winner === AI) {
+                    message = "🤖 AI Wins! 🤖";
+                    statusElement.textContent = "Better luck next time!";
+                    highlightWinningCells(AI);
+                } else {
+                    message = "🤝 It's a Draw! 🤝";
+                    statusElement.textContent = "It's a tie!";
+                }
+                showMessage(message);
+            }
+
+            function highlightWinningCells(winner) {
+                const winningCombo = winningCombos.find((combination) =>
+                    combination.every((index) => board[index] === winner),
+                );
+                if (winningCombo) {
+                    winningCombo.forEach((index) => {
+                        boardElement.children[index]?.classList.add(
+                            "winning-cell",
+                        );
+                    });
+                }
+            }
+
+            function removeCellListeners() {
+                const cells = boardElement.querySelectorAll(".cell");
+                cells.forEach((cell) => {
+                    const newCell = cell.cloneNode(true);
+                    cell.parentNode.replaceChild(newCell, cell);
+                    newCell.style.cursor = "default";
+                });
+            }
+
+            function showMessage(text) {
+                messageBox.textContent = text;
+                messageBox.classList.add("show");
+            }
+
+            function hideMessage() {
+                messageBox.classList.remove("show");
+            }
+
+            function aiMove() {
+                if (!gameActive || currentPlayer !== AI) return;
+
+                statusElement.textContent = "AI is thinking...";
+
+                const bestMoveIndex = findBestMove(board);
+
+                if (bestMoveIndex !== -1) {
+                    makeMove(bestMoveIndex, AI);
+
+                    if (!checkGameOver()) {
+                        switchPlayer();
+                    }
+                } else {
+                    console.error("AI couldn't find a move.");
+
+                    if (checkDraw(board)) endGame(null);
+                }
+            }
+
+            function findBestMove(currentBoard) {
+                let bestScore = -Infinity;
+                let move = -1;
+
+                for (let i = 0; i < currentBoard.length; i++) {
+                    if (currentBoard[i] === EMPTY) {
+                        currentBoard[i] = AI;
+                        let score = minimax(currentBoard, 0, false);
+                        currentBoard[i] = EMPTY;
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+                return move;
+            }
+
+            function minimax(currentBoard, depth, isMaximizing) {
+                if (checkWin(currentBoard, AI)) {
+                    return 10 - depth;
+                }
+                if (checkWin(currentBoard, PLAYER)) {
+                    return depth - 10;
+                }
+                if (checkDraw(currentBoard)) {
+                    return 0;
+                }
+
+                if (isMaximizing) {
+                    let bestScore = -Infinity;
+                    for (let i = 0; i < currentBoard.length; i++) {
+                        if (currentBoard[i] === EMPTY) {
+                            currentBoard[i] = AI;
+                            let score = minimax(currentBoard, depth + 1, false);
+                            currentBoard[i] = EMPTY;
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    for (let i = 0; i < currentBoard.length; i++) {
+                        if (currentBoard[i] === EMPTY) {
+                            currentBoard[i] = PLAYER;
+                            let score = minimax(currentBoard, depth + 1, true);
+                            currentBoard[i] = EMPTY;
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                }
+            }
+
+            initializeGame();
+        </script>
+    </body>
+</html>
